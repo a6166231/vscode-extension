@@ -4,3 +4,4 @@
 
  - send、recive的消息的设置
  - send、recive的消息跳转
+ - send消息时显示所有recive方的相应参数类型
