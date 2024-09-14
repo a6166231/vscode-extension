@@ -2,7 +2,7 @@
     "name": "super-notice",
     "displayName": "super-notice",
     "description": "",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "engines": {
         "vscode": "^1.89.0"
     },
@@ -39,6 +39,11 @@
         "configuration": {
             "title": "SuperNotice",
             "properties": {
+                "supernotice.typeEnable": {
+                    "description": "是否启用消息的类型提示",
+                    "type": "boolean",
+                    "default": true
+                },
                 "supernotice.noticeLink": {
                     "description": "消息的链接",
                     "type": "object",
@@ -47,6 +52,9 @@
                             "type": "string"
                         },
                         "recive": {
+                            "type": "string"
+                        },
+                        "table": {
                             "type": "string"
                         }
                     },
