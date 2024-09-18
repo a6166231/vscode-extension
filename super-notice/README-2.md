@@ -46,3 +46,5 @@
   - 在send的消息之后输入 ","（逗号）时，会激活检测并显示所有recive的地方的参数类型（即图中1标记处）
 
   - 方向键 上下键切换不同的recive方的参数类型
+
+  - 不需要该功能的，可以在vscode 的setting中搜索 supernotice，找到Type Enable 关闭即可
