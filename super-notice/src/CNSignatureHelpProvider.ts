@@ -155,7 +155,8 @@ export class CNSignatureHelpProvider implements vscode.SignatureHelpProvider {
 
         let helper = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', location.uri, pos);
         if (helper && helper.length) {
-            return (helper[0].contents[0] as vscode.MarkdownString).value;
+            let contents = helper[0].contents as vscode.MarkdownString[] || [];
+            return contents.map(v => v.value).join('\n');
         }
     }
 

@@ -18,8 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(senderCMD, reciveCMD,);
 
-	let provider = new CNSignatureHelpProvider();
-	vscode.languages.registerSignatureHelpProvider('typescript', provider, ',');
+	vscode.languages.registerSignatureHelpProvider({ language: 'typescript' }, new CNSignatureHelpProvider(), ',');
 }
 
 // This method is called when your extension is deactivated
