@@ -1,0 +1,15 @@
+{
+    "groups": [
+        {
+            "name": "preload",
+            "keys": "test_image"
+        }
+    ],
+    "resources": [
+        {
+            "name": "test_image",
+            "type": "image",
+            "url": "assets/test.png"
+        }
+    ]
+}
