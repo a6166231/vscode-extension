@@ -11,13 +11,15 @@ import { CNReferenceCall } from './CNReferenceCall';
 export function activate(context: vscode.ExtensionContext) {
 	LocalCfg.Instance();
 	const senderCMD = commands.registerTextEditorCommand('supernotice.allSender', (editor) => {
-		CNReferenceCall.allNoticeFormat(editor, CustomRuleType.send);
+		CNReferenceCall.allNoticeFormat(editor);
 	});
 	const reciveCMD = commands.registerTextEditorCommand('supernotice.allReciver', (editor) => {
-		CNReferenceCall.allNoticeFormat(editor, CustomRuleType.recive, CustomRuleType.send);
+		CNReferenceCall.allNoticeFormat(editor, true);
 	});
-	context.subscriptions.push(senderCMD, reciveCMD,);
-
+	const SetCMD = commands.registerTextEditorCommand('supernotice.setSender', async (editor) => {
+		CNReferenceCall.setSenderInfo(editor);
+	});
+	context.subscriptions.push(senderCMD, reciveCMD, SetCMD);
 	vscode.languages.registerSignatureHelpProvider({ language: 'typescript' }, new CNSignatureHelpProvider(), ',');
 }
 

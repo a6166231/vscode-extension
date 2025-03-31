@@ -15,23 +15,35 @@
         "commands": [
 			{
 				"command": "supernotice.allSender",
-				"title": "All Sender"
+				"title": "All Sender",
+                "category": "Super Notice"
 			},
 			{
 				"command": "supernotice.allReciver",
-				"title": "All Recive"
+				"title": "All Recive",
+                "category": "Super Notice"
+			},
+			{
+				"command": "supernotice.setSender",
+				"title": "Set Sender",
+                "category": "Super Notice"
 			}
 		],
 		"menus": {
 			"editor/context": [
 				{
 					"command": "supernotice.allSender",
-					"when": "editorHasReferenceProvider",
+					"when": "editorHasReferenceProvider && supernotice.status.ready",
 					"group": "navigation@1.31"
 				},
 				{
 					"command": "supernotice.allReciver",
-					"when": "editorHasReferenceProvider",
+					"when": "editorHasReferenceProvider && supernotice.status.ready",
+					"group": "navigation@1.31"
+				},
+				{
+					"command": "supernotice.setSender",
+					"when": "editorHasDefinitionProvider && !supernotice.status.ready",
 					"group": "navigation@1.31"
 				}
 			]
@@ -49,9 +61,6 @@
                     "type": "object",
                     "properties": {
                         "send": {
-                            "type": "string"
-                        },
-                        "recive": {
                             "type": "string"
                         },
                         "table": {

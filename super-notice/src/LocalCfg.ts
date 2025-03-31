@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 
 export enum CustomRuleType {
     send = 'send',
-    recive = 'recive',
     table = 'table',
     enable = 'enable'
 }
@@ -14,6 +13,12 @@ export class LocalCfg {
 
     private _keyBakMap: Record<string, Array<string>> = null as any;
 
+    private _sender: {
+        uri: vscode.Uri | null, pos: vscode.Position | null
+    } = null as any;
+
+    private _inited: boolean = false;
+
     private static _instance: LocalCfg;
     static Instance() {
         if (!this._instance) {
@@ -24,46 +29,85 @@ export class LocalCfg {
 
     constructor() {
         this._initCfgChangeListener();
+        this._initCfg();
     }
 
     private _initCfgChangeListener() {
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration('supernotice')) {
-                this._initCfg();
+                this._initCfg(true);
             }
         });
     }
 
-    private _initCfg() {
+    private _initCfg(bForce: boolean = false) {
+        if (!bForce && this._inited) {
+            return;
+        }
+
+        this._inited = true;
         let cfg: Record<string, string> = vscode.workspace.getConfiguration("supernotice").get("noticeLink", {});
 
         this._typeEnable = vscode.workspace.getConfiguration("supernotice").get("typeEnable", true);
 
         this._cfg = cfg;
         this._keyBakMap = {};
-        if (cfg[CustomRuleType.send]) {
-            this._keyBakMap[CustomRuleType.send] = cfg[CustomRuleType.send].split('|');
-        }
 
-        if (cfg[CustomRuleType.recive]) {
-            this._keyBakMap[CustomRuleType.recive] = cfg[CustomRuleType.recive].split('|');
+        let sendCfg = cfg[CustomRuleType.send];
+        if (sendCfg) {
+            let lastIdx = sendCfg.lastIndexOf(':');
+            if (lastIdx >= 0) {
+                try {
+                    let uri = vscode.Uri.parse(sendCfg.substring(0, lastIdx));
+                    let pos: Array<number> = [0, 0];
+                    pos = JSON.parse(sendCfg.substring(lastIdx + 1));
+                    this._sender = {
+                        uri: uri,
+                        pos: new vscode.Position(pos[0], pos[1])
+                    };
+                } catch (error) {
+                    console.log(error);
+                }
+            }
         }
+        vscode.commands.executeCommand('setContext', 'supernotice.status.ready', Boolean(this._sender));
+    }
+
+    getTableCfg() {
+        if (!this._inited) {
+            this._initCfg();
+        }
+        return this._cfg[CustomRuleType.table];
     }
 
     getTypeEnable() {
         return this._typeEnable;
     }
 
-    getCfg(type: CustomRuleType) {
-        if (!this._cfg) {
+    getSenderCfg() {
+        if (!this._inited) {
             this._initCfg();
         }
-        return this._cfg[type] || '';
+        return this._sender;
     }
-    getCustomCfg(type: CustomRuleType) {
-        if (!this._keyBakMap) {
-            this._initCfg();
+
+    setCustomSender(document: vscode.LocationLink, range: vscode.Range) {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showInformationMessage(`设置失败`);
+            return;
         }
-        return this._keyBakMap[type];
+
+        let starIdx = [range.start.line, range.start.character];
+        let sendS = `${vscode.workspace.asRelativePath(document.targetUri.fsPath)}:${JSON.stringify(starIdx)}`;
+        let cfg: Record<string, string> = vscode.workspace.getConfiguration("supernotice").get("noticeLink", {});
+
+        cfg[CustomRuleType.send] = sendS;
+        vscode.workspace.getConfiguration("supernotice").update('noticeLink', cfg, vscode.ConfigurationTarget.Workspace, true).then((res) => {
+            vscode.window.showInformationMessage(`设置成功`);
+        }, (err) => {
+            vscode.window.showInformationMessage(`设置失败`);
+            console.log(err);
+        });
     }
 }
