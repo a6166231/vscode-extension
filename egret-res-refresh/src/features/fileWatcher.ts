@@ -32,10 +32,10 @@ export class FileWatcher {
         // 检查是否存在 wingProperties.json 文件
         for (const folder of workspaceFolders) {
             if (await WingConfig.getInstance().loadConfig(folder.uri.fsPath)) {
-                this.wingCfgWatcher = vscode.workspace.createFileSystemWatcher(path.join(folder.uri.fsPath, WingConfig.wingPropertyPath));
-                this.wingCfgWatcher.onDidChange(uri => {
-                    WingConfig.getInstance().loadConfig(folder.uri.fsPath);
-                });
+                // this.wingCfgWatcher = vscode.workspace.createFileSystemWatcher(path.join(folder.uri.fsPath, WingConfig.wingPropertyPath));
+                // this.wingCfgWatcher.onDidChange(uri => {
+                //     WingConfig.getInstance().loadConfig(folder.uri.fsPath);
+                // });
                 WingConfig.getInstance().initListener();
                 // 配置加载成功，初始化文件监听
                 this.initFileWatcher();
