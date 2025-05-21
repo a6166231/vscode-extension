@@ -50,13 +50,41 @@ export class WingConfig {
         return [];
     }
 
+    private _delayRefreshSet: Set<string> = new Set();
+    private _delayTimer: NodeJS.Timeout | null = null;
     public initListener() {
         FileWatcher.getInstance().onDidChange((fpath, uri) => {
-            fpath = fpath.replaceAll('\\', '/');
-            if (this.checkFileIsWingPro(fpath)) {
-                return;
-            }
+            this.onFileStatusChange(fpath);
+        });
+        FileWatcher.getInstance().onDidAdd((fpath, uri) => {
+            this.onFileStatusChange(fpath);
+        });
+        // FileWatcher.getInstance().onDidDelete((fpath, uri) => {
+        //     this.onFileStatusChange(fpath);
+        // });
+    }
 
+    onFileStatusChange(fpath: string) {
+        fpath = fpath.replaceAll('\\', '/');
+        if (this.checkFileIsWingPro(fpath)) {
+            return;
+        }
+        this._delayRefreshSet.add(fpath);
+
+        if (this._delayTimer) {
+            return;
+        }
+        this._delayTimer = setTimeout(() => {
+            this.readyRefreshFPathList();
+            this._delayTimer = null;
+        }, 500);
+    }
+
+    public readyRefreshFPathList() {
+        if (!this._delayRefreshSet.size) {
+            return;
+        }
+        for (let fpath of this._delayRefreshSet) {
             for (let item of this.resourceWatcher) {
                 if (!item.dirtyMap.has(fpath)) {
                     continue;
@@ -68,12 +96,13 @@ export class WingConfig {
                     let keys = Object.keys(json.frames || {});
                     data.subkeys = keys.sort().join(',');
                     this.refreshResourcesJsonData(item.configPath, JSON.stringify(item.data, null, '\t'));
-                    console.log('更新成功', data.subkeys);
+                    console.log('更新成功', fpath, ':', data.subkeys);
                 } catch (error) {
-                    console.log('更新失败', error);
+                    console.log('更新失败', fpath, ':', error);
                 }
             }
-        });
+        }
+        this._delayRefreshSet.clear()
     }
 
     public refreshResourcesJsonData(jsonPath: string, data: string) {

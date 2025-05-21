@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { WingConfig } from './wingConfig';
+import { OutputChannel } from './outputChannel';
 
 type FileChangeCallback = (relativePath: string, uri: vscode.Uri) => void;
 
@@ -18,6 +19,7 @@ export class FileWatcher {
     // 回调函数注册表
     private deleteCallbacks: Set<FileChangeCallback> = new Set();
     private changeCallbacks: Set<FileChangeCallback> = new Set();
+    private addCallbacks: Set<FileChangeCallback> = new Set();
 
     protected constructor() {
         this.init();
@@ -47,36 +49,34 @@ export class FileWatcher {
     }
 
     private initFileWatcher() {
-        this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*', true, false, false);
-
-        // 监听文件删除事件
+        this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.json');
         this.fileSystemWatcher.onDidDelete(uri => {
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             if (!workspaceFolder) {
                 return;
             }
-
             const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+            OutputChannel.instance.log(`文件删除事件：${relativePath}`);
 
-            console.log(`文件删除事件：${relativePath}`);
-
-            // 触发所有注册的删除回调
             this.deleteCallbacks.forEach(callback => callback(relativePath, uri));
         });
-
-        // 监听文件修改事件
         this.fileSystemWatcher.onDidChange(uri => {
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             if (!workspaceFolder) {
                 return;
             }
-
             const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-
-            console.log(`文件修改事件：${relativePath}`);
-
-            // 触发所有注册的修改回调
+            OutputChannel.instance.log(`文件修改事件：${relativePath}`);
             this.changeCallbacks.forEach(callback => callback(relativePath, uri));
+        });
+        this.fileSystemWatcher.onDidCreate(uri => {
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            if (!workspaceFolder) {
+                return;
+            }
+            const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+            OutputChannel.instance.log(`文件创建事件：${relativePath}`);
+            this.addCallbacks.forEach(callback => callback(relativePath, uri));
         });
     }
 
@@ -89,6 +89,10 @@ export class FileWatcher {
     public onDidChange(callback: FileChangeCallback): void {
         this.changeCallbacks.add(callback);
     }
+    // 注册文件修改事件回调
+    public onDidAdd(callback: FileChangeCallback): void {
+        this.addCallbacks.add(callback);
+    }
 
     // 取消注册文件删除事件回调
     public offDidDelete(callback: FileChangeCallback): void {
@@ -98,6 +102,11 @@ export class FileWatcher {
     // 取消注册文件修改事件回调
     public offDidChange(callback: FileChangeCallback): void {
         this.changeCallbacks.delete(callback);
+    }
+
+    // 取消注册文件修改事件回调
+    public offDidAdd(callback: FileChangeCallback): void {
+        this.addCallbacks.delete(callback);
     }
 
     public dispose() {
