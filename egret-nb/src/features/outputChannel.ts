@@ -13,18 +13,18 @@ export class OutputChannel {
     }
 
     init(context: vscode.ExtensionContext) {
-        this.outputChannel = vscode.window.createOutputChannel('EGRET_RES_REFRESH');
-        context.subscriptions.push(this.outputChannel);
-        this.outputChannel.appendLine('插件已激活！'); // 检查此日志是否出现
-        this.outputChannel.show(true);
+        // this.outputChannel = vscode.window.createOutputChannel('EGRET_RES_REFRESH');
+        // context.subscriptions.push(this.outputChannel);
+        // this.outputChannel.appendLine('插件已激活！'); // 检查此日志是否出现
+        // this.outputChannel.show(true);
     }
 
     deactivate() {
-        this.outputChannel.dispose(); // 释放资源
+        // this.outputChannel.dispose(); // 释放资源
     }
 
     log(message: string) {
         console.log('@@@@@@@@@@@@@@@', message);
-        this.outputChannel.appendLine(message);
+        // this.outputChannel.appendLine(message);
     }
 }
