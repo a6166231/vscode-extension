@@ -1,123 +1,88 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { WingConfig } from './wingConfig';
-import { OutputChannel } from './outputChannel';
 
 type FileChangeCallback = (relativePath: string, uri: vscode.Uri) => void;
 
+let deleteCallbacks: Set<FileChangeCallback> = new Set();
+let changeCallbacks: Set<FileChangeCallback> = new Set();
+let addCallbacks: Set<FileChangeCallback> = new Set();
+
 export class FileWatcher {
-    private fileSystemWatcher: vscode.FileSystemWatcher | null = null;
-    private wingCfgWatcher: vscode.FileSystemWatcher | null = null;
-
-    private static _instance: FileWatcher;
-    public static getInstance(...args: any[]) {
-        if (!this._instance) {
-            this._instance = Reflect.construct(this, args);
-        }
-        return this._instance;
-    }
-    // 回调函数注册表
-    private deleteCallbacks: Set<FileChangeCallback> = new Set();
-    private changeCallbacks: Set<FileChangeCallback> = new Set();
-    private addCallbacks: Set<FileChangeCallback> = new Set();
-
-    protected constructor() {
-        this.init();
-    }
-
-    private async init() {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-            return;
-        }
-
-        // 检查是否存在 wingProperties.json 文件
-        for (const folder of workspaceFolders) {
-            if (await WingConfig.getInstance().loadConfig(folder.uri.fsPath)) {
-                // this.wingCfgWatcher = vscode.workspace.createFileSystemWatcher(path.join(folder.uri.fsPath, WingConfig.wingPropertyPath));
-                // this.wingCfgWatcher.onDidChange(uri => {
-                //     WingConfig.getInstance().loadConfig(folder.uri.fsPath);
-                // });
-                WingConfig.getInstance().initListener();
-                // 配置加载成功，初始化文件监听
-                this.initFileWatcher();
-                return;
-            }
-        }
-
-        console.log('未检测到 Wing 项目，文件监听未启动');
+    constructor() {
+        this.initFileWatcher();
     }
 
     private initFileWatcher() {
-        this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.json');
-        this.fileSystemWatcher.onDidDelete(uri => {
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            if (!workspaceFolder) {
-                return;
-            }
-            const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-            OutputChannel.instance.log(`文件删除事件：${relativePath}`);
+        console.log('初始化文件监听器');
+        try {
+            let fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.json', false, false, false);
+            console.log(fileSystemWatcher);
+            fileSystemWatcher.onDidDelete(uri => {
+                // const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+                // if (!workspaceFolder) {
+                //     return;
+                // }
+                // const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+                console.log(`文件删除事件：${uri.fsPath}`);
 
-            this.deleteCallbacks.forEach(callback => callback(relativePath, uri));
-        });
-        this.fileSystemWatcher.onDidChange(uri => {
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            if (!workspaceFolder) {
-                return;
-            }
-            const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-            OutputChannel.instance.log(`文件修改事件：${relativePath}`);
-            this.changeCallbacks.forEach(callback => callback(relativePath, uri));
-        });
-        this.fileSystemWatcher.onDidCreate(uri => {
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            if (!workspaceFolder) {
-                return;
-            }
-            const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-            OutputChannel.instance.log(`文件创建事件：${relativePath}`);
-            this.addCallbacks.forEach(callback => callback(relativePath, uri));
-        });
+                deleteCallbacks.forEach(callback => callback(uri.fsPath, uri));
+            });
+            fileSystemWatcher.onDidChange(uri => {
+                // const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+                // if (!workspaceFolder) {
+                //     return;
+                // }
+                // const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+                console.log(`文件修改事件：${uri.fsPath}`);
+                changeCallbacks.forEach(callback => callback(uri.fsPath, uri));
+            });
+            fileSystemWatcher.onDidCreate(uri => {
+                // const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+                // if (!workspaceFolder) {
+                //     return;
+                // }
+                // const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+                console.log(`文件创建事件：${uri.fsPath}`);
+                addCallbacks.forEach(callback => callback(uri.fsPath, uri));
+            });
+        } catch (error) {
+            console.error('初始化文件监听器失败:', error);
+        }
     }
 
     // 注册文件删除事件回调
     public onDidDelete(callback: FileChangeCallback): void {
-        this.deleteCallbacks.add(callback);
+        deleteCallbacks.add(callback);
     }
 
     // 注册文件修改事件回调
     public onDidChange(callback: FileChangeCallback): void {
-        this.changeCallbacks.add(callback);
+        changeCallbacks.add(callback);
     }
     // 注册文件修改事件回调
     public onDidAdd(callback: FileChangeCallback): void {
-        this.addCallbacks.add(callback);
+        addCallbacks.add(callback);
     }
 
     // 取消注册文件删除事件回调
     public offDidDelete(callback: FileChangeCallback): void {
-        this.deleteCallbacks.delete(callback);
+        deleteCallbacks.delete(callback);
     }
 
     // 取消注册文件修改事件回调
     public offDidChange(callback: FileChangeCallback): void {
-        this.changeCallbacks.delete(callback);
+        changeCallbacks.delete(callback);
     }
 
     // 取消注册文件修改事件回调
     public offDidAdd(callback: FileChangeCallback): void {
-        this.addCallbacks.delete(callback);
+        addCallbacks.delete(callback);
     }
 
     public dispose() {
-        if (this.fileSystemWatcher) {
-            this.fileSystemWatcher.dispose();
-        }
-        if (this.wingCfgWatcher) {
-            this.wingCfgWatcher.dispose();
-        }
         // 清空所有回调
-        this.deleteCallbacks.clear();
-        this.changeCallbacks.clear();
+        addCallbacks.clear();
+        changeCallbacks.clear();
+        deleteCallbacks.clear();
     }
 }
