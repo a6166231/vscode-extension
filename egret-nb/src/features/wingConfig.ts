@@ -69,31 +69,35 @@ export class WingConfig {
         if (!_delayRefreshSet.size) {
             return;
         }
-        console.log(_delayRefreshSet.values());
-        for (let fpath of _delayRefreshSet) {
-            for (let item of resourceWatcher) {
-                if (!item.dirtyMap.has(fpath)) {
-                    continue;
+        let refreshList = Array.from(_delayRefreshSet.values());
+        for (let item of resourceWatcher) {
+            this.resourceJsonUpdateCall(item, (v: string) => {
+                for (let fpath of refreshList) {
+                    if (!item.dirtyMap.has(fpath)) {
+                        continue;
+                    }
+                    let data = item.dirtyMap.get(fpath);
+                    try {
+                        let json = JSON.parse(fs.readFileSync(path.join(item.relativePath, data.url), 'utf-8'));
+                        let keys = Object.keys(json.frames || {});
+                        data.subkeys = keys.sort().join(',');
+                        let r = JSON.stringify(item.data, null, '\t');
+                        console.log(r, v);
+                        if (r !== v) {
+                            this.refreshResourcesJsonData(item.configPath, r);
+                        }
+                        console.log('更新成功', fpath);
+                    } catch (error) {
+                        console.log('更新失败', fpath, ':', error);
+                    }
                 }
-                let data = item.dirtyMap.get(fpath);
-                try {
-                    let json = JSON.parse(fs.readFileSync(path.join(item.relativePath, data.url), 'utf-8'));
-                    let keys = Object.keys(json.frames || {});
-                    data.subkeys = keys.sort().join(',');
-                    this.refreshResourcesJsonData(item.configPath, JSON.stringify(item.data, null, '\t'), () => {
-                        this.resourceJsonUpdateCall(item);
-                    });
-                    console.log('更新成功', fpath);
-                } catch (error) {
-                    console.log('更新失败', fpath, ':', error);
-                }
-            }
+            });
         }
         _delayRefreshSet.clear();
     }
 
     public refreshResourcesJsonData(jsonPath: string, data: string, successCallback?: () => void) {
-        data = data.replace(/\r\n/g, '\r\n');
+        data = data.replace(/\n/g, '\r\n');
         fs.writeFile(path.join(workspacePath, jsonPath), data, 'utf-8', (err) => {
             if (err) {
                 console.error('刷新资源配置文件失败:', jsonPath, err);
@@ -136,16 +140,17 @@ export class WingConfig {
                 abspath: path.join(workspacePath, cfg.configPath).replace(/\\/g, '/'),
                 dirtyMap: new Map<string, any>()
             };
-            this.resourceJsonUpdateCall(obj);
+            this.resourceJsonUpdateCall(obj, null);
             resourceWatcher.push(obj);
         }
     }
-    private resourceJsonUpdateCall(obj: any) {
+    private resourceJsonUpdateCall(obj: any, endCall: any) {
         fs.readFile(obj.abspath, 'utf-8', (err, v) => {
             if (err) {
                 console.error('读取资源配置文件失败:', obj.abspath, err);
                 return;
             }
+            obj.dirtyMap.clear();
             let json = JSON.parse(v);
             obj.data = json;
             for (let res of json.resources) {
@@ -153,6 +158,7 @@ export class WingConfig {
                     obj.dirtyMap.set(obj.relativePath + res.url, res);
                 }
             }
+            endCall && endCall(v);
         });
     }
 
