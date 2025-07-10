@@ -42,9 +42,9 @@ export class WingConfig {
         fileWatcher.onDidChange((fpath: string) => {
             this.onFileStatusChange(fpath);
         });
-        fileWatcher.onDidAdd((fpath: string) => {
-            this.onFileStatusChange(fpath);
-        });
+        // fileWatcher.onDidAdd((fpath: string) => {
+        //     this.onFileStatusChange(fpath);
+        // });
     }
 
     onFileStatusChange(fpath: string) {
